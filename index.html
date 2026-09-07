@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Collaborative Outcome Tracker — Post-Discharge Psychiatric Care</title>
+    <meta name="description" content="Collaborative, client-defined outcome tracking platform shifting post-discharge care measurement from attendance to meaningful recovery indicators." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      body {
+        background-color: #020617;
+        color: #f8fafc;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+      .glass-panel {
+        background: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(51, 65, 85, 0.5);
+      }
+      .glass-card {
+        background: rgba(30, 41, 59, 0.6);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(71, 85, 105, 0.4);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen flex flex-col justify-between selection:bg-teal-500 selection:text-white">
+    <!-- Top Navigation Header -->
+    <header className="glass-panel border-b border-slate-800 sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="p-2 bg-teal-500/20 text-teal-400 rounded-lg border border-teal-500/30">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <span class="font-bold text-lg text-white tracking-wide">OutcomeTracker</span>
+          <span class="text-xs px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full font-medium">
+            Prototype / Non-Clinical
+          </span>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <a href="/api/docs" target="_blank" class="text-xs font-semibold px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-teal-400 rounded-lg border border-slate-700 transition-colors flex items-center gap-1.5">
+            <span>FastAPI Interactive Docs</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+          <a href="http://localhost:5173" target="_blank" class="text-xs font-semibold px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors shadow-lg shadow-teal-600/30 flex items-center gap-1.5">
+            <span>Launch Vite App (5173)</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-1 space-y-8">
+      <!-- Welcome Banner -->
+      <div class="glass-panel p-8 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 bg-teal-500/10 text-teal-400 text-xs rounded-full border border-teal-500/20 font-semibold mb-3">
+            <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+            Post-Discharge Psychiatric Care Prototype
+          </div>
+          <h1 class="text-3xl font-extrabold text-white tracking-tight">Collaborative Outcome Tracker</h1>
+          <p class="text-sm text-slate-400 mt-2 max-w-2xl leading-relaxed">
+            Shifting post-discharge outcome measurement from passive attendance metrics (e.g. appointment attendance rate) to client-defined, evidence-backed meaningful recovery goals.
+          </p>
+        </div>
+      </div>
+
+      <!-- Paradigm Shift Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="glass-panel p-6 rounded-2xl border border-slate-800">
+          <div class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">Traditional Attendance Baseline</div>
+          <div class="text-3xl font-bold text-blue-400 mb-2">72.4% <span class="text-xs text-slate-400 font-normal">Attendance Rate</span></div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Measures appointment attendance. Fails to indicate whether daily independent functioning, travel confidence, or sleep routines actually improved.
+          </p>
+        </div>
+
+        <div class="glass-panel p-6 rounded-2xl border border-teal-500/40">
+          <div class="text-xs font-bold text-teal-400 uppercase tracking-wider mb-2">Collaborative Outcome Tracker</div>
+          <div class="text-3xl font-bold text-teal-400 mb-2">68.5% <span class="text-xs text-slate-300 font-normal">Goal Progress Rate</span></div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Measures evidence-backed progress toward meaningful client-defined targets (e.g., independent travel, daily routines) with dual-agreed adjustments.
+          </p>
+        </div>
+      </div>
+
+      <!-- Quick Actions Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div class="glass-card p-5 rounded-xl border border-slate-800 hover:border-teal-500/50 transition-colors">
+          <h3 class="text-base font-bold text-white mb-1">FastAPI Backend</h3>
+          <p class="text-xs text-slate-400 mb-4">REST APIs for clients, goals, progress, barriers, adjustments, and escalation engine.</p>
+          <a href="/api/docs" target="_blank" class="text-xs text-teal-400 hover:text-teal-300 font-semibold inline-flex items-center gap-1">
+            Open OpenAPI Docs &rarr;
+          </a>
+        </div>
+
+        <div class="glass-card p-5 rounded-xl border border-slate-800 hover:border-teal-500/50 transition-colors">
+          <h3 class="text-base font-bold text-white mb-1">Vite React Frontend</h3>
+          <p class="text-xs text-slate-400 mb-4">Interactive UI with role-based dashboards (Client, Clinician, Supervisor).</p>
+          <a href="http://localhost:5173" target="_blank" class="text-xs text-teal-400 hover:text-teal-300 font-semibold inline-flex items-center gap-1">
+            Open React App &rarr;
+          </a>
+        </div>
+
+        <div class="glass-card p-5 rounded-xl border border-slate-800 hover:border-teal-500/50 transition-colors">
+          <h3 class="text-base font-bold text-white mb-1">Demo Credentials</h3>
+          <p class="text-xs text-slate-400">
+            <strong>Client:</strong> client1 / password123<br/>
+            <strong>Clinician:</strong> clinician1 / password123<br/>
+            <strong>Supervisor:</strong> supervisor1 / password123
+          </p>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-panel border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+      Collaborative Outcome Tracker — Non-Clinical Prototype Demonstrator (Synthetic Data Only)
+    </footer>
+  </body>
+</html>
