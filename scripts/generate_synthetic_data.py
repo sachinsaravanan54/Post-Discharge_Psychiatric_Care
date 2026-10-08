@@ -1,7 +1,7 @@
 import os
 import json
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def generate_data(seed=42):
     random.seed(seed)
@@ -33,7 +33,7 @@ def generate_data(seed=42):
         "Client Kilo", "Client Lima", "Client Mike", "Client November", "Client Oscar"
     ]
 
-    base_date = datetime.utcnow() - timedelta(days=90)
+    base_date = datetime.now(timezone.utc) - timedelta(days=90)
 
     # 1. Generate 100 Synthetic Clients
     for i in range(1, 101):

@@ -133,6 +133,7 @@ A reviewer can execute the following 12-step verification workflow:
 
 ## 📁 Repository Deliverables Directory
 
+- **Technical Documentation**: [`docs/technical_documentation.md`](file:///p:/Coding%20Planet/proj2/docs/technical_documentation.md)
 - **Field Workflow Map**: [`docs/field_workflow.md`](file:///p:/Coding%20Planet/proj2/docs/field_workflow.md)
 - **Failure-Mode Analysis (FMEA)**: [`docs/failure_mode_analysis.md`](file:///p:/Coding%20Planet/proj2/docs/failure_mode_analysis.md)
 - **User Validation Report**: [`docs/user_validation.md`](file:///p:/Coding%20Planet/proj2/docs/user_validation.md)
@@ -140,6 +141,7 @@ A reviewer can execute the following 12-step verification workflow:
 - **Architecture Documentation**: [`docs/architecture.md`](file:///p:/Coding%20Planet/proj2/docs/architecture.md)
 - **Baseline vs Tracker Comparison Docs**: [`docs/baseline_vs_prototype.md`](file:///p:/Coding%20Planet/proj2/docs/baseline_vs_prototype.md)
 - **Presentation Slides Document**: [`docs/presentation.md`](file:///p:/Coding%20Planet/proj2/docs/presentation.md)
-- **Experiment Notebook**: [`notebooks/experiment.ipynb`](file:///p:/Coding%20Planet/proj2/notebooks/experiment.ipynb)
+- **Experiment Notebook**: [`experiments/outcome_tracker_experiment.ipynb`](file:///p:/Coding%20Planet/proj2/experiments/outcome_tracker_experiment.ipynb)
 - **Synthetic Data Generator Script**: [`scripts/generate_synthetic_data.py`](file:///p:/Coding%20Planet/proj2/scripts/generate_synthetic_data.py)
 - **Database Seeding Script**: [`scripts/seed_database.py`](file:///p:/Coding%20Planet/proj2/scripts/seed_database.py)
+
