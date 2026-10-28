@@ -51,6 +51,8 @@ class Goal(Base):
     status = Column(String, default="Active")
     target_date = Column(DateTime, nullable=True)
     is_increasing = Column(Boolean, default=True)
+    has_rating_discrepancy = Column(Boolean, default=False)
+    rating_discrepancy_note = Column(Text, nullable=True)
 
     client = relationship("Client", back_populates="goals")
     progress_entries = relationship("ProgressEntry", back_populates="goal", cascade="all, delete-orphan")
@@ -157,3 +159,21 @@ class AuditEvent(Base):
     entity_id = Column(Integer, nullable=False)
     timestamp = Column(DateTime, default=utc_now)
     metadata_minimal = Column(Text, nullable=True)
+
+class EscalationEvent(Base):
+    __tablename__ = "escalation_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    rule_type = Column(String, nullable=False)  # MISSED_CHECKIN, OVERDUE_ACTION, REPEATED_BARRIERS, APPROACHING_DEADLINE, GOAL_DETERIORATION, RATING_DISAGREEMENT
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=True)
+    goal_id = Column(Integer, ForeignKey("goals.id"), nullable=True)
+    action_id = Column(Integer, ForeignKey("follow_up_actions.id"), nullable=True)
+    trigger_reason = Column(Text, nullable=False)
+    assigned_owner = Column(String, nullable=False)
+    created_at = Column(DateTime, default=utc_now)
+    target_resolution_deadline = Column(DateTime, nullable=False)
+    status = Column(String, default="Open")  # Open, In Review, Resolved
+    dedup_key = Column(String, index=True, nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+    audit_notes = Column(Text, nullable=True)
+

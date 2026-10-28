@@ -54,7 +54,9 @@ def enrich_goal_out(goal: Goal) -> GoalOut:
         latest_progress_percentage=latest_pct,
         latest_trend=trend,
         has_active_barrier=has_active_barrier,
-        unresolved_actions_count=unresolved_actions
+        unresolved_actions_count=unresolved_actions,
+        has_rating_discrepancy=goal.has_rating_discrepancy,
+        rating_discrepancy_note=goal.rating_discrepancy_note
     )
 
 @router.get("", response_model=List[GoalOut])
@@ -143,6 +145,20 @@ def update_goal(
     db.refresh(goal)
     return enrich_goal_out(goal)
 
+@router.delete("/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_goal(
+    goal_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["CLINICIAN", "SUPERVISOR", "CLIENT"]))
+):
+    goal = db.query(Goal).filter(Goal.id == goal_id).first()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+
+    db.delete(goal)
+    db.commit()
+    return None
+
 @router.post("/{goal_id}/progress", response_model=ProgressOut, status_code=status.HTTP_201_CREATED)
 def record_progress(
     goal_id: int,
@@ -154,10 +170,20 @@ def record_progress(
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
 
-    if goal.baseline_value is None or goal.target_value is None:
+    if goal.baseline_value is None and goal.target_value is None:
         raise HTTPException(
             status_code=400,
-            detail="Cannot record progress: Goal has no measurable baseline or target."
+            detail="Cannot record progress: Goal has no measurable baseline or target. Both baseline and target values are missing."
+        )
+    elif goal.baseline_value is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot record progress: Goal has no measurable baseline or target. Baseline value is missing."
+        )
+    elif goal.target_value is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot record progress: Goal has no measurable baseline or target. Target value is missing."
         )
 
     pct, new_status = calculate_goal_progress(
@@ -197,6 +223,32 @@ def record_progress(
         goal.status = "Completed"
     elif needs_review:
         goal.status = "Needs Review"
+
+    # Conflicting clinician vs client progress ratings check:
+    # Stored separately (entry is already saved); flag disagreement and require collaborative review
+    other_entries = [e for e in goal.progress_entries if e.reported_by != payload.reported_by and e.id != entry.id]
+    if other_entries:
+        latest_other = sorted(other_entries, key=lambda x: x.reported_at, reverse=True)[0]
+        discrepancy = abs(pct - latest_other.progress_percentage)
+        if discrepancy >= 20.0:
+            goal.has_rating_discrepancy = True
+            goal.rating_discrepancy_note = (
+                f"Rating disagreement: {payload.reported_by} reported {pct}%, "
+                f"while {latest_other.reported_by} reported {latest_other.progress_percentage}% "
+                f"(discrepancy: {discrepancy:.1f}%). Both ratings preserved separately; requires collaborative review."
+            )
+            if goal.status != "Completed":
+                goal.status = "Needs Review"
+
+    # Rapid deterioration check in measurement history (Non-clinical review alert):
+    prior_entries = [e for e in goal.progress_entries if e.id != entry.id]
+    if prior_entries:
+        latest_prior = sorted(prior_entries, key=lambda x: x.reported_at, reverse=True)[0]
+        if latest_prior.progress_percentage is not None:
+            drop = latest_prior.progress_percentage - pct
+            if drop >= 25.0:
+                if goal.status != "Completed":
+                    goal.status = "Needs Review"
 
     db.commit()
     return entry
@@ -243,8 +295,27 @@ def update_barrier(
     if payload.resolution:
         b.resolution = payload.resolution
     db.commit()
-    db.refresh(b)
-    return b
+@router.get("/{goal_id}/barriers", response_model=List[BarrierOut])
+def list_barriers(
+    goal_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return db.query(Barrier).filter(Barrier.goal_id == goal_id).order_by(Barrier.identified_at.desc()).all()
+
+@router.delete("/barriers/{barrier_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_barrier(
+    barrier_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    b = db.query(Barrier).filter(Barrier.id == barrier_id).first()
+    if not b:
+        raise HTTPException(status_code=404, detail="Barrier not found")
+    db.delete(b)
+    db.commit()
+    return None
+
 
 @router.post("/{goal_id}/adjustments", response_model=AdjustmentOut, status_code=status.HTTP_201_CREATED)
 def create_adjustment(

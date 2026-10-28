@@ -36,6 +36,10 @@ class ClientCreate(BaseModel):
     display_name_or_alias: str
     active: bool = True
 
+class ClientUpdate(BaseModel):
+    display_name_or_alias: Optional[str] = None
+    active: Optional[bool] = None
+
 class ClientOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -87,6 +91,8 @@ class GoalOut(BaseModel):
     latest_trend: Optional[str] = "Stable"
     has_active_barrier: bool = False
     unresolved_actions_count: int = 0
+    has_rating_discrepancy: bool = False
+    rating_discrepancy_note: Optional[str] = None
 
 # ProgressEntry Schemas
 class ProgressCreate(BaseModel):
@@ -278,3 +284,39 @@ class ProgressDiscussionSummaryOut(BaseModel):
     summary_text: str
     progress_percentage: float
     escalation_warning: Optional[str] = None
+
+class SessionUpdate(BaseModel):
+    attendance_status: Optional[str] = None
+    purpose: Optional[str] = None
+    summary: Optional[str] = None
+    next_review_date: Optional[datetime] = None
+
+class EscalationEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    rule_type: str
+    client_id: Optional[int] = None
+    goal_id: Optional[int] = None
+    action_id: Optional[int] = None
+    trigger_reason: str
+    assigned_owner: str
+    created_at: datetime
+    target_resolution_deadline: datetime
+    status: str
+    dedup_key: Optional[str] = None
+    resolved_at: Optional[datetime] = None
+    audit_notes: Optional[str] = None
+
+class EscalationResolveRequest(BaseModel):
+    resolution_notes: Optional[str] = "Resolved through collaborative care review"
+
+class LandingMetricsOut(BaseModel):
+    attendance_rate: float
+    goal_progress_rate: float
+    total_active_clients: int
+    total_active_goals: int
+    false_positive_rate: float
+    unresolved_high_priority_actions: int
+    system_status: str
+

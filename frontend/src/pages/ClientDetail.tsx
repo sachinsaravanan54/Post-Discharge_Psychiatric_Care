@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { api } from '../services/api';
+import { api, getApiErrorMessage } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Goal, Client } from '../types';
+
 import {
-  Plus, Target, ChevronLeft, X
+  Plus, Target, ChevronLeft, X, Edit3, Trash2, AlertTriangle, CheckCircle2, ShieldAlert
 } from 'lucide-react';
 
 export const ClientDetail: React.FC = () => {
@@ -14,13 +15,17 @@ export const ClientDetail: React.FC = () => {
   const [client, setClient] = useState<Client | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Modals state
   const [showGoalModal, setShowGoalModal] = useState(false);
+  const [showEditGoalModal, setShowEditGoalModal] = useState<Goal | null>(null);
   const [showProgressModal, setShowProgressModal] = useState<Goal | null>(null);
   const [showAdjustmentModal, setShowAdjustmentModal] = useState<Goal | null>(null);
+  const [showBarrierModal, setShowBarrierModal] = useState<Goal | null>(null);
 
-  // Form states
+  // Goal Form states
   const [goalText, setGoalText] = useState('');
   const [goalCategory, setGoalCategory] = useState('Independent Travel');
   const [baselineValue, setBaselineValue] = useState<string>('0');
@@ -29,6 +34,13 @@ export const ClientDetail: React.FC = () => {
   const [measurementMethod] = useState('count');
   const [importanceRating] = useState<number>(8);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Edit Goal Form states
+  const [editGoalText, setEditGoalText] = useState('');
+  const [editBaseline, setEditBaseline] = useState<string>('');
+  const [editTarget, setEditTarget] = useState<string>('');
+  const [editUnit, setEditUnit] = useState('');
+  const [editStatus, setEditStatus] = useState('Active');
 
   // Progress Form State
   const [progressVal, setProgressVal] = useState<string>('');
@@ -40,9 +52,14 @@ export const ClientDetail: React.FC = () => {
   // Adjustment Form State
   const [adjText, setAdjText] = useState('');
 
+  // Barrier Form State
+  const [barrierDesc, setBarrierDesc] = useState('');
+  const [barrierSeverity, setBarrierSeverity] = useState('Medium');
+
   const fetchClientAndGoals = async () => {
     try {
       setLoading(true);
+      setErrorMsg(null);
       const [clientRes, goalsRes] = await Promise.all([
         api.get(`/clients/${id}`),
         api.get(`/goals?client_id=${id}`)
@@ -50,7 +67,7 @@ export const ClientDetail: React.FC = () => {
       setClient(clientRes.data);
       setGoals(goalsRes.data);
     } catch (err) {
-      console.error('Error fetching client details', err);
+      setErrorMsg(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -81,9 +98,44 @@ export const ClientDetail: React.FC = () => {
 
       setShowGoalModal(false);
       setGoalText('');
+      setSuccessMsg('Successfully created recovery goal.');
       fetchClientAndGoals();
     } catch (err: any) {
-      setFormError(err.response?.data?.detail || 'Failed to create goal');
+      setFormError(getApiErrorMessage(err));
+    }
+  };
+
+  const handleUpdateGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showEditGoalModal) return;
+    try {
+      const bVal = editBaseline !== '' ? parseFloat(editBaseline) : null;
+      const tVal = editTarget !== '' ? parseFloat(editTarget) : null;
+
+      await api.patch(`/goals/${showEditGoalModal.id}`, {
+        goal_text: editGoalText,
+        baseline_value: bVal,
+        target_value: tVal,
+        unit: editUnit,
+        status: editStatus
+      });
+
+      setShowEditGoalModal(null);
+      setSuccessMsg('Goal updated successfully.');
+      fetchClientAndGoals();
+    } catch (err: any) {
+      setErrorMsg(getApiErrorMessage(err));
+    }
+  };
+
+  const handleDeleteGoal = async (goalId: number, text: string) => {
+    if (!window.confirm(`Are you sure you want to delete goal: "${text}"?`)) return;
+    try {
+      await api.delete(`/goals/${goalId}`);
+      setSuccessMsg('Goal removed successfully.');
+      fetchClientAndGoals();
+    } catch (err: any) {
+      setErrorMsg(getApiErrorMessage(err));
     }
   };
 
@@ -105,9 +157,10 @@ export const ClientDetail: React.FC = () => {
       setShowProgressModal(null);
       setProgressVal('');
       setEvidenceNote('');
+      setSuccessMsg('Progress entry recorded successfully.');
       fetchClientAndGoals();
     } catch (err: any) {
-      setProgressError(err.response?.data?.detail || 'Failed to record progress');
+      setProgressError(getApiErrorMessage(err));
     }
   };
 
@@ -123,11 +176,40 @@ export const ClientDetail: React.FC = () => {
       });
       setShowAdjustmentModal(null);
       setAdjText('');
+      setSuccessMsg('Adjustment proposal created.');
       fetchClientAndGoals();
-    } catch (err) {
-      console.error('Failed to propose adjustment', err);
+    } catch (err: any) {
+      setErrorMsg(getApiErrorMessage(err));
     }
   };
+
+  const handleCreateBarrier = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showBarrierModal) return;
+    try {
+      await api.post(`/goals/${showBarrierModal.id}/barriers`, {
+        goal_id: showBarrierModal.id,
+        description: barrierDesc,
+        severity: barrierSeverity
+      });
+      setShowBarrierModal(null);
+      setBarrierDesc('');
+      setSuccessMsg('Barrier flagged for care team review.');
+      fetchClientAndGoals();
+    } catch (err: any) {
+      setErrorMsg(getApiErrorMessage(err));
+    }
+  };
+
+  const openEditGoalModal = (goal: Goal) => {
+    setShowEditGoalModal(goal);
+    setEditGoalText(goal.goal_text);
+    setEditBaseline(goal.baseline_value !== null && goal.baseline_value !== undefined ? String(goal.baseline_value) : '');
+    setEditTarget(goal.target_value !== null && goal.target_value !== undefined ? String(goal.target_value) : '');
+    setEditUnit(goal.unit || '');
+    setEditStatus(goal.status);
+  };
+
 
 
 
@@ -156,14 +238,41 @@ export const ClientDetail: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => setShowGoalModal(true)}
-          className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs rounded-xl transition-all shadow-lg shadow-teal-600/30 flex items-center gap-2 self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Collaboratively Define New Goal</span>
-        </button>
+        {role !== 'CLIENT' && (
+          <button
+            onClick={() => setShowGoalModal(true)}
+            className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs rounded-xl transition-all shadow-lg shadow-teal-600/30 flex items-center gap-2 self-start sm:self-auto"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Collaboratively Define New Goal</span>
+          </button>
+        )}
       </div>
+
+      {/* Notifications */}
+      {successMsg && (
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>{successMsg}</span>
+          </div>
+          <button onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-white">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            <span>{errorMsg}</span>
+          </div>
+          <button onClick={() => setErrorMsg(null)} className="text-rose-400 hover:text-white">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Goals List */}
       <div className="space-y-6">
@@ -196,7 +305,7 @@ export const ClientDetail: React.FC = () => {
                     <h3 className="text-lg font-bold text-white mt-1">{goal.goal_text}</h3>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <button
                       onClick={() => setShowProgressModal(goal)}
                       className="px-3 py-1.5 bg-teal-600/90 hover:bg-teal-500 text-white font-semibold text-xs rounded-lg transition-colors shadow-md shadow-teal-600/20"
@@ -209,8 +318,46 @@ export const ClientDetail: React.FC = () => {
                     >
                       Propose Adjustment
                     </button>
+                    <button
+                      onClick={() => setShowBarrierModal(goal)}
+                      className="px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold text-xs rounded-lg transition-colors"
+                    >
+                      Flag Barrier
+                    </button>
+                    {role !== 'CLIENT' && (
+                      <div className="flex items-center gap-1 ml-1">
+                        <button
+                          title="Edit Goal"
+                          onClick={() => openEditGoalModal(goal)}
+                          className="p-1.5 text-slate-400 hover:text-teal-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          title="Delete Goal"
+                          onClick={() => handleDeleteGoal(goal.id, goal.goal_text)}
+                          className="p-1.5 text-slate-400 hover:text-rose-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {/* Rating Discrepancy Alert Banner */}
+                {goal.has_rating_discrepancy && (
+                  <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl text-xs space-y-1">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <ShieldAlert className="h-4 w-4 text-amber-400" />
+                      <span>Collaborative Review Required — Conflicting Progress Ratings</span>
+                    </div>
+                    <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                      {goal.rating_discrepancy_note || 'Client self-reported rating diverges significantly from clinician assessment. Both perspectives are preserved separately without overwriting; collaborative care review is required.'}
+                    </p>
+                  </div>
+                )}
+
 
                 {/* Progress Bar & Baseline/Target Info */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800/80">
@@ -475,6 +622,140 @@ export const ClientDetail: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Goal Modal */}
+      {showEditGoalModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel max-w-lg w-full p-6 rounded-2xl border border-slate-800 space-y-5">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-white">Edit Goal: {showEditGoalModal.goal_text}</h3>
+              <button onClick={() => setShowEditGoalModal(null)} className="text-slate-400 hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateGoal} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Goal Description</label>
+                <input
+                  type="text"
+                  required
+                  value={editGoalText}
+                  onChange={(e) => setEditGoalText(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-teal-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Baseline Value</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editBaseline}
+                    onChange={(e) => setEditBaseline(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Target Value</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editTarget}
+                    onChange={(e) => setEditTarget(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Unit</label>
+                  <input
+                    type="text"
+                    value={editUnit}
+                    onChange={(e) => setEditUnit(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Status</label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-teal-500"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Needs Review">Needs Review</option>
+                    <option value="Needs measurement definition">Needs measurement definition</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs rounded-xl transition-all shadow-md shadow-teal-600/30"
+              >
+                Save Goal Updates
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Flag Barrier Modal */}
+      {showBarrierModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel max-w-lg w-full p-6 rounded-2xl border border-slate-800 space-y-5">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-white">Flag Barrier for Goal</h3>
+              <button onClick={() => setShowBarrierModal(null)} className="text-slate-400 hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateBarrier} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Barrier Description</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="e.g. Panic attack experienced at route 4 interchange; client avoided subsequent travel"
+                  value={barrierDesc}
+                  onChange={(e) => setBarrierDesc(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Severity</label>
+                <select
+                  value={barrierSeverity}
+                  onChange={(e) => setBarrierSeverity(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-teal-500"
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-xl transition-all shadow-md shadow-amber-600/30"
+              >
+                Submit Barrier Alert
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

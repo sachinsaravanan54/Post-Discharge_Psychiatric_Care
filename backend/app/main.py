@@ -32,10 +32,27 @@ app.include_router(sessions.router)
 app.include_router(dashboard.router)
 app.include_router(analytics.router)
 
+import os
+from fastapi import Request
+from fastapi.responses import FileResponse
+
 @app.get("/")
-def root():
+def root(request: Request):
+    accept = request.headers.get("accept", "")
+    index_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "index.html")
+    if "text/html" in accept and os.path.exists(index_path):
+        return FileResponse(index_path)
     return {
         "message": "Welcome to Collaborative Outcome Tracker API",
-        "docs": "/api/docs",
+        "docs": f"{API_V1_STR}/docs",
+        "landing_page": "/landing",
         "status": "active"
     }
+
+@app.get("/landing")
+def get_landing_page():
+    index_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"message": "Landing page index.html not found"}
+

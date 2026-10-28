@@ -3,9 +3,13 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.domain import FollowUpAction, Goal, User, AuditEvent
-from app.schemas.dto import ActionCreate, ActionUpdate, ActionOut, ActionEscalateRequest
+from app.models.domain import FollowUpAction, Goal, User, AuditEvent, EscalationEvent
+from app.schemas.dto import (
+    ActionCreate, ActionUpdate, ActionOut, ActionEscalateRequest,
+    EscalationEventOut, EscalationResolveRequest
+)
 from app.security.auth import get_current_user, require_role
+from app.services.escalation_engine import run_escalation_engine
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
 
@@ -86,6 +90,19 @@ def update_action(
     db.refresh(action)
     return action
 
+@router.delete("/{action_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_action(
+    action_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["CLINICIAN", "SUPERVISOR"]))
+):
+    action = db.query(FollowUpAction).filter(FollowUpAction.id == action_id).first()
+    if not action:
+        raise HTTPException(status_code=404, detail="Action not found")
+    db.delete(action)
+    db.commit()
+    return None
+
 @router.post("/{action_id}/escalate", response_model=ActionOut)
 def escalate_action(
     action_id: int,
@@ -113,3 +130,53 @@ def escalate_action(
     db.commit()
     db.refresh(action)
     return action
+
+@router.get("/escalations/events", response_model=List[EscalationEventOut])
+def list_escalation_events(
+    rule_type: Optional[str] = None,
+    status_filter: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(EscalationEvent)
+    if rule_type:
+        query = query.filter(EscalationEvent.rule_type == rule_type)
+    if status_filter:
+        query = query.filter(EscalationEvent.status == status_filter)
+    return query.order_by(EscalationEvent.created_at.desc()).all()
+
+@router.patch("/escalations/events/{event_id}/resolve", response_model=EscalationEventOut)
+def resolve_escalation_event(
+    event_id: int,
+    payload: EscalationResolveRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["CLINICIAN", "SUPERVISOR"]))
+):
+    ev = db.query(EscalationEvent).filter(EscalationEvent.id == event_id).first()
+    if not ev:
+        raise HTTPException(status_code=404, detail="Escalation event not found")
+
+    ev.status = "Resolved"
+    ev.resolved_at = datetime.now(timezone.utc)
+    ev.audit_notes = payload.resolution_notes or "Resolved"
+
+    db.add(AuditEvent(
+        actor_role=current_user.role,
+        actor_id=current_user.username,
+        event_type="RESOLVE_ESCALATION",
+        entity_type="ESCALATION_EVENT",
+        entity_id=ev.id,
+        metadata_minimal=f"Resolved escalation #{ev.id} ({ev.rule_type}): {payload.resolution_notes}"
+    ))
+    db.commit()
+    db.refresh(ev)
+    return ev
+
+@router.post("/scan-escalations")
+def trigger_escalation_sweep(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["CLINICIAN", "SUPERVISOR"]))
+):
+    stats = run_escalation_engine(db)
+    return {"status": "success", "sweep_results": stats}
+

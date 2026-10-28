@@ -35,7 +35,10 @@ export interface Goal {
   latest_trend?: string;
   has_active_barrier?: boolean;
   unresolved_actions_count?: number;
+  has_rating_discrepancy?: boolean;
+  rating_discrepancy_note?: string;
 }
+
 
 export interface ProgressEntry {
   id: number;
@@ -126,3 +129,30 @@ export interface BaselineComparisonResponse {
   };
   clients: ClientComparisonItem[];
 }
+
+export interface EscalationEvent {
+  id: number;
+  rule_type: string;
+  client_id?: number;
+  goal_id?: number;
+  action_id?: number;
+  trigger_reason: string;
+  assigned_owner: string;
+  created_at: string;
+  target_resolution_deadline: string;
+  status: string;
+  dedup_key?: string;
+  resolved_at?: string;
+  audit_notes?: string;
+}
+
+export interface LandingMetrics {
+  attendance_rate: number;
+  goal_progress_rate: number;
+  total_active_clients: number;
+  total_active_goals: number;
+  false_positive_rate: number;
+  unresolved_high_priority_actions: number;
+  system_status: string;
+}
+
